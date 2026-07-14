@@ -1,9 +1,12 @@
 package in.strikes.crudApplicationDemo.service;
 
+import in.strikes.crudApplicationDemo.dto.StudentRequestDTO;
+import in.strikes.crudApplicationDemo.dto.StudentResponseDTO;
 import in.strikes.crudApplicationDemo.entity.Student;
 import in.strikes.crudApplicationDemo.repository.StudentRepository;
 import org.springframework.stereotype.Component;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class StudentService {
@@ -13,38 +16,58 @@ public class StudentService {
                 this.studentRepository = studentRepository;
         }
 
-        // CREATE
-        public Student createStudent(Student student) {
-            student.setIsDeleted(0); // ensure new student is active
-            return studentRepository.save(student);
+        // ==================== Helper: DTO → Entity ====================
+        // RequestDTO (client ka data) ko Student Entity mein convert karo
+        private Student toEntity(StudentRequestDTO dto) {
+                Student student = new Student();
+                student.setName(dto.getName());
+                student.setAge(dto.getAge());
+                student.setEmail(dto.getEmail());
+                student.setRollno(dto.getRollno());
+                student.setSubject(dto.getSubject());
+                return student;
+        }
+
+        // CREATE — DTO leta hai, Entity banata hai, save karta hai, ResponseDTO return karta hai
+        public StudentResponseDTO createStudent(StudentRequestDTO dto) {
+                Student student = toEntity(dto);
+                student.setIsDeleted(0); // ensure new student is active
+                Student saved = studentRepository.save(student);
+                return StudentResponseDTO.convertToDTO(saved); // Entity → Response DTO
         }
 
         // READ ONE — only active students
-        public Student getOneStudent(Long id){
+        public StudentResponseDTO getOneStudent(Long id){
                 Student existStudent = studentRepository.findByIdAndIsDeleted(id, 0).orElse(null);
                 if(existStudent == null){
                         throw new RuntimeException("Student not found or already deleted");
                 }
-                return existStudent;
+                return StudentResponseDTO.convertToDTO(existStudent);
         }
 
         // READ ALL — only active students
-        public List<Student> getAllStudents(){
-                return studentRepository.findAllByIsDeleted(0);
+        public List<StudentResponseDTO> getAllStudents(){
+                // stream() se har ek Student entity ko ResponseDTO mein convert karo
+                return studentRepository.findAllByIsDeleted(0)
+                        .stream()
+                        .map(StudentResponseDTO::convertToDTO)
+                        .collect(Collectors.toList());
         }
 
         // UPDATE — only active students
-        public Student updateStudent(Long id, Student updatedData){
+        public StudentResponseDTO updateStudent(Long id, StudentRequestDTO dto){
                 Student existStudent = studentRepository.findByIdAndIsDeleted(id, 0).orElse(null);
                 if(existStudent == null){
                         throw new RuntimeException("Student not found or already deleted");
                 }
-                existStudent.setName(updatedData.getName());
-                existStudent.setAge(updatedData.getAge());
-                existStudent.setEmail(updatedData.getEmail());
-                existStudent.setRollno(updatedData.getRollno());
-                existStudent.setSubject(updatedData.getSubject());
-                return studentRepository.save(existStudent);
+                // DTO se updated values set karo
+                existStudent.setName(dto.getName());
+                existStudent.setAge(dto.getAge());
+                existStudent.setEmail(dto.getEmail());
+                existStudent.setRollno(dto.getRollno());
+                existStudent.setSubject(dto.getSubject());
+                Student updated = studentRepository.save(existStudent);
+                return StudentResponseDTO.convertToDTO(updated);
         }
 
         // SOFT DELETE — flag set karo, DB mein rehta hai

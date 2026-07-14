@@ -1,7 +1,9 @@
 package in.strikes.crudApplicationDemo.controller;
 
-import in.strikes.crudApplicationDemo.entity.Student;
+import in.strikes.crudApplicationDemo.dto.StudentRequestDTO;
+import in.strikes.crudApplicationDemo.dto.StudentResponseDTO;
 import in.strikes.crudApplicationDemo.service.StudentService;
+import jakarta.validation.Valid;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -22,61 +24,52 @@ public class StudentController {
     public StudentController(StudentService studentService){
         this.studentService = studentService;
     }
+
+    // CREATE
+    // @Valid — Spring ko trigger karta hai ki StudentRequestDTO ke annotations check karo
+    // Agar koi validation fail hua → GlobalExceptionHandler handle karega
     @PostMapping("/create")
-    public ResponseEntity<Student> createStudent(@RequestBody Student student){
-     //create student   
-     Student createdStudent = studentService.createStudent(student);
-     return ResponseEntity.status(201).body(createdStudent);
+    public ResponseEntity<StudentResponseDTO> createStudent(@Valid @RequestBody StudentRequestDTO dto){
+        StudentResponseDTO created = studentService.createStudent(dto);
+        return ResponseEntity.status(201).body(created);
     }
-    // get one student
+
+    // GET ONE
     @GetMapping("/get/{id}")
-    public ResponseEntity<Student> getOneStudent(@PathVariable Long id){
-        try {
-            Student student = studentService.getOneStudent(id);
-            return ResponseEntity.status(200).body(student);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(404).build();
-        }
+    public ResponseEntity<StudentResponseDTO> getOneStudent(@PathVariable Long id){
+        StudentResponseDTO student = studentService.getOneStudent(id);
+        return ResponseEntity.ok(student);
+        // Note: RuntimeException ab GlobalExceptionHandler pakdega — try-catch ki zaroorat nahi!
     }
-    // getAll
+
+    // GET ALL
     @GetMapping("/get")
-    public ResponseEntity<List<Student>> getAllStudents(){
-        try{
-            List<Student> allStudents = studentService.getAllStudents();
-            return ResponseEntity.status(200).body(allStudents);
-        }
-        catch(RuntimeException e){
-            return ResponseEntity.status(404).build();
-        }
+    public ResponseEntity<List<StudentResponseDTO>> getAllStudents(){
+        List<StudentResponseDTO> allStudents = studentService.getAllStudents();
+        return ResponseEntity.ok(allStudents);
     }
-    // update student
+
+    // UPDATE
     @PutMapping("/update/{id}")
-    public ResponseEntity<Student> updateStudent(@PathVariable Long id, @RequestBody Student updatedData){
-        try {
-            Student updated = studentService.updateStudent(id, updatedData);
-            return ResponseEntity.status(200).body(updated);
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(404).build();
-        }
+    public ResponseEntity<StudentResponseDTO> updateStudent(
+            @PathVariable Long id,
+            @Valid @RequestBody StudentRequestDTO dto   // @Valid yahan bhi zaroori hai!
+    ){
+        StudentResponseDTO updated = studentService.updateStudent(id, dto);
+        return ResponseEntity.ok(updated);
     }
-    // soft delete student (flag set, DB mein rehta hai)
+
+    // SOFT DELETE
     @DeleteMapping("/soft-delete/{id}")
     public ResponseEntity<String> softDeleteStudent(@PathVariable Long id){
-        try {
-            studentService.softDeleteStudent(id);
-            return ResponseEntity.status(200).body("Student soft deleted! (is_deleted = 1)");
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body("Student not found or already deleted!");
-        }
+        studentService.softDeleteStudent(id);
+        return ResponseEntity.ok("Student soft deleted! (is_deleted = 1)");
     }
-    // hard delete student (DB se seedha remove)
+
+    // HARD DELETE
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> deleteStudent(@PathVariable Long id){
-        try {
-            studentService.deleteStudent(id);
-            return ResponseEntity.status(200).body("Student permanently deleted!");
-        } catch (RuntimeException e) {
-            return ResponseEntity.status(404).body("Student not found!");
-        }
+        studentService.deleteStudent(id);
+        return ResponseEntity.ok("Student permanently deleted!");
     }
 }
